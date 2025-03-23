@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg
+*.egg-info/
+dist/
+build/
+*.log
+
+# Virtual Environment
+.venv/
+env/
+venv/
+
+# Jupyter Notebooks checkpoints
+.ipynb_checkpoints/
+
+# IDE/Editor
+.vscode/
+.idea/
+
+# Data files (если не хочешь загружать сырые данные)
+data/raw/
+*.csv
+
+# OS
+.DS_Store
+Thumbs.db
