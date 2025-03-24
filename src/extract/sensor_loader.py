@@ -2,7 +2,7 @@ import pandas as pd
 from data.stations import stations
 import os
 
-def load_parameter_column_from_file(file_path, param_name):
+def load_parameter_column_from_file(file_path: str, param_name: str):
     try:
         df = pd.read_csv(file_path, header=0, on_bad_lines='skip')
     except Exception as e:
@@ -17,9 +17,12 @@ def load_parameter_column_from_file(file_path, param_name):
         print(f"File {file_path} skipped: no necessary columns")
         return None
 
-def load_station_data_from_csv(folder_path, station_name, latitude, longitude):
+def load_station_data_from_csv(folder_path: str, station_name: str, latitude: float, longitude: float) -> pd.DataFrame:
     param_dfs = {}
-    csv_files = [f for f in os.listdir(folder_path) if f.endswith('.csv')]
+    csv_files = []
+    for file in os.listdir(folder_path):
+        if file.endswith('.csv'):
+            csv_files.append(file)
 
     for file in csv_files:
         param_name = file.split('_')[-1].replace('.csv', '')
@@ -59,7 +62,6 @@ def collect_all_stations_data():
             station_dfs.append(df)
 
     if station_dfs:
-        result_df = pd.concat(station_dfs, ignore_index=True)
-        return result_df
+        return pd.concat(station_dfs, ignore_index=True)
     else:
         return pd.DataFrame()

@@ -7,7 +7,7 @@ cache_session = requests_cache.CachedSession('.cache', expire_after=-1)
 retry_session = retry(cache_session, retries=5, backoff_factor=0.2)
 openmeteo = openmeteo_requests.Client(session=retry_session)
 
-def get_hourly_weather(lat, lon, start_date, end_date):
+def get_hourly_weather(lat: float, lon: float, start_date: str, end_date: str) -> pd.DataFrame:
     url = "https://archive-api.open-meteo.com/v1/archive"
     params = {
         "latitude": lat,
@@ -44,7 +44,7 @@ def get_hourly_weather(lat, lon, start_date, end_date):
     return df
 
 
-def get_daily_weather(lat, lon, station_name, start_date, end_date):
+def get_daily_weather(lat: float, lon: float, station_name: str, start_date: str, end_date: str) -> pd.DataFrame:
     hourly_df = get_hourly_weather(lat, lon, start_date, end_date)
     hourly_df['station_name'] = station_name
     hourly_df['day'] = pd.to_datetime(hourly_df['date'].dt.date)
@@ -77,24 +77,23 @@ def add_weather_columns(df: pd.DataFrame) -> pd.DataFrame:
 
     all_weather_daily.append(daily_df)
 
-  weather_all = pd.concat(all_weather_daily, ignore_index=True)
+  weather_df = pd.concat(all_weather_daily, ignore_index=True)
 
   df['day'] = pd.to_datetime(df['date'].dt.date)
-  weather_all['day'] = pd.to_datetime(weather_all['day'])
+  weather_df['day'] = pd.to_datetime(weather_df['day'])
 
-  processed_df = pd.merge(df, weather_all, on=['day', 'station_name'], how='left')
-  processed_df.drop(columns=['day'], inplace=True)
+  merged_df = pd.merge(df, weather_df, on=['day', 'station_name'], how='left')
+  merged_df.drop(columns=['day'], inplace=True)
 
-  processed_df.rename(columns={
+  merged_df.rename(columns={
     "temperature_2m": "temperature",
     "relative_humidity_2m": "humidity",
     "wind_speed_10m": "wind_speed",
-    "surface_pressure": "pr essure"
+    "surface_pressure": "pressure"
   }, inplace=True)
 
-  processed_df["temperature"] = processed_df["temperature"].round(2)
-  processed_df["humidity"] = processed_df["humidity"].round(2)
-  processed_df["wind_speed"] = processed_df["wind_speed"].round(2)
-  processed_df["pressure"] = processed_df["pressure"].round(2)
+  for col in ['temperature', 'humidity', 'wind_speed', 'pressure']:
+    if col in merged_df.columns:
+      merged_df[col] = merged_df[col].round(2)
 
-  return processed_df
+  return merged_df
