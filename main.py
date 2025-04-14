@@ -12,18 +12,23 @@ pd.set_option('display.max_colwidth', None)
 
 # df = collect_all_stations_data()
 # df = add_weather_columns(df)
-# df = select_features(df, threshold=0.9)
 
-df = pd.read_csv('data/processed/2025-03-24_15-07-23.csv')
 
-columns_to_scale = ['PM2.5', 'PM10', 'temperature', 'humidity', 'wind_speed', 'pressure']
-df_raw = df.copy()
-df_standard = normalize_features(df_raw, columns_to_scale, mode='standard')
-df_minmax = normalize_features(df_raw, columns_to_scale, mode='minmax')
-save_scaling_histograms(df_raw, df_standard, df_minmax, columns_to_scale)
+# timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+# filename = f"data/processed/{timestamp}.csv"
+# df.to_csv(filename, index=False)
+
+df = pd.read_csv('./data/processed/2025-04-14_06-09-44.csv')
+df_n = select_features(df, threshold=0.9)
+columns_to_scale = ['PM2.5', 'temperature', 'humidity', 'wind_speed', 'pressure']
+df_n = normalize_features(df_n, columns_to_scale, mode='minmax')
+print("Before:")
+print(df.head())
+print(df.tail())
+print("After:")
+print(df_n.head())
+print(df_n.tail())
 
 timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 filename = f"data/processed/{timestamp}.csv"
-df.to_csv(filename, index=False)
-
-print(df)
+df_n.to_csv(filename, index=False)

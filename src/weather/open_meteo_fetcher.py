@@ -1,11 +1,13 @@
+import time
+
 import openmeteo_requests
 import requests_cache
 import pandas as pd
 from retry_requests import retry
 
-cache_session = requests_cache.CachedSession('.cache', expire_after=-1)
-retry_session = retry(cache_session, retries=5, backoff_factor=0.2)
-openmeteo = openmeteo_requests.Client(session=retry_session)
+cache = requests_cache.CachedSession(".cache", expire_after=-1)
+session = retry(cache, retries=5, backoff_factor=0.2)
+openmeteo = openmeteo_requests.Client(session=session)
 
 def get_hourly_weather(lat: float, lon: float, start_date: str, end_date: str) -> pd.DataFrame:
     url = "https://archive-api.open-meteo.com/v1/archive"
@@ -23,10 +25,9 @@ def get_hourly_weather(lat: float, lon: float, start_date: str, end_date: str) -
         "timezone": "Asia/Almaty"
     }
 
-    responses = openmeteo.weather_api(url, params=params)
-    response = responses[0]
-
+    response = openmeteo.weather_api(url, params=params)[0]
     hourly = response.Hourly()
+
     df = pd.DataFrame({
         "date": pd.date_range(
             start=pd.to_datetime(hourly.Time(), unit="s", utc=True),
@@ -34,66 +35,53 @@ def get_hourly_weather(lat: float, lon: float, start_date: str, end_date: str) -
             freq=pd.Timedelta(seconds=hourly.Interval()),
             inclusive="left"
         ),
-        "temperature_2m": hourly.Variables(0).ValuesAsNumpy(),
-        "relative_humidity_2m": hourly.Variables(1).ValuesAsNumpy(),
-        "wind_speed_10m": hourly.Variables(2).ValuesAsNumpy(),
-        "surface_pressure": hourly.Variables(3).ValuesAsNumpy()
+        "temperature": hourly.Variables(0).ValuesAsNumpy(),
+        "humidity": hourly.Variables(1).ValuesAsNumpy(),
+        "wind_speed": hourly.Variables(2).ValuesAsNumpy(),
+        "pressure": hourly.Variables(3).ValuesAsNumpy()
     })
 
-    df['date'] = df['date'].dt.tz_localize(None)
+    df["date"] = df["date"].dt.tz_localize(None)
+    df["temperature"] = df["temperature"].round(2)
+    df["humidity"] = df["humidity"].round(2)
+    df["wind_speed"] = df["wind_speed"].round(2)
+    df["pressure"] = df["pressure"].round(2)
+    df["latitude"] = lat
+    df["longitude"] = lon
+
     return df
 
-
-def get_daily_weather(lat: float, lon: float, station_name: str, start_date: str, end_date: str) -> pd.DataFrame:
-    hourly_df = get_hourly_weather(lat, lon, start_date, end_date)
-    hourly_df['station_name'] = station_name
-    hourly_df['day'] = pd.to_datetime(hourly_df['date'].dt.date)
-
-    daily_df = hourly_df.groupby(['day', 'station_name']).agg({
-        'temperature_2m': 'mean',
-        'relative_humidity_2m': 'mean',
-        'wind_speed_10m': 'mean',
-        'surface_pressure': 'mean'
-    }).reset_index()
-
-    return daily_df
-
-
 def add_weather_columns(df: pd.DataFrame) -> pd.DataFrame:
-  start_date = df['date'].min().strftime('%Y-%m-%d')
-  end_date = df['date'].max().strftime('%Y-%m-%d')
+    start_date = df["date"].min().strftime("%Y-%m-%d")
+    end_date = df["date"].max().strftime("%Y-%m-%d")
 
-  stations = df[['station_name', 'latitude', 'longitude']].drop_duplicates()
-  all_weather_daily = []
+    stations = df[["station_name", "latitude", "longitude"]].drop_duplicates()
+    weather_all = []
 
-  for _, row in stations.iterrows():
-    daily_df = get_daily_weather(
-      lat=row['latitude'],
-      lon=row['longitude'],
-      station_name=row['station_name'],
-      start_date=start_date,
-      end_date=end_date
+    for i, (_, station) in enumerate(stations.iterrows()):
+        print(f"[{i + 1}/{len(stations)}] Fetching weather for {station['station_name']}")
+
+        time.sleep(15)
+
+        weather_df = get_hourly_weather(
+            lat=station["latitude"],
+            lon=station["longitude"],
+            start_date=start_date,
+            end_date=end_date
+        )
+        weather_df["station_name"] = station["station_name"]
+        weather_all.append(weather_df)
+
+    weather_df = pd.concat(weather_all, ignore_index=True)
+
+    df["date"] = pd.to_datetime(df["date"]).dt.tz_localize(None)
+    weather_df["date"] = pd.to_datetime(weather_df["date"]).dt.tz_localize(None)
+
+    merged_df = pd.merge(
+        df,
+        weather_df,
+        on=["date", "station_name", "latitude", "longitude"],
+        how="left"
     )
 
-    all_weather_daily.append(daily_df)
-
-  weather_df = pd.concat(all_weather_daily, ignore_index=True)
-
-  df['day'] = pd.to_datetime(df['date'].dt.date)
-  weather_df['day'] = pd.to_datetime(weather_df['day'])
-
-  merged_df = pd.merge(df, weather_df, on=['day', 'station_name'], how='left')
-  merged_df.drop(columns=['day'], inplace=True)
-
-  merged_df.rename(columns={
-    "temperature_2m": "temperature",
-    "relative_humidity_2m": "humidity",
-    "wind_speed_10m": "wind_speed",
-    "surface_pressure": "pressure"
-  }, inplace=True)
-
-  for col in ['temperature', 'humidity', 'wind_speed', 'pressure']:
-    if col in merged_df.columns:
-      merged_df[col] = merged_df[col].round(2)
-
-  return merged_df
+    return merged_df
