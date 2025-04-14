@@ -23,7 +23,7 @@ def select_features(df: pd.DataFrame, threshold: float = 0.9) -> pd.DataFrame:
             selected_features.append(key)
 
     print(f"\nSelected features (more than {int(threshold * 100)}% filled): {selected_features}")
-    final_columns = non_feature_columns  + selected_features
+    final_columns = [col for col in non_feature_columns if col in df.columns] + selected_features
     filtered_df = df[final_columns].copy()
     filtered_df = filtered_df.dropna(subset=selected_features, how='all')
 

@@ -19,14 +19,16 @@ def load_parameter_column_from_file(file_path: str, param_name: str):
 
 def load_station_data_from_csv(folder_path: str, station_name: str, latitude: float, longitude: float) -> pd.DataFrame:
     param_dfs = {}
-    csv_files = []
-    for file in os.listdir(folder_path):
-        if file.endswith('.csv'):
-            csv_files.append(file)
+    csv_files = [f for f in os.listdir(folder_path) if f.endswith('.csv')]
 
     for file in csv_files:
         param_name = file.split('_')[-1].replace('.csv', '')
         file_path = os.path.join(folder_path, file)
+
+        if os.path.getsize(file_path) == 0:
+            print(f"Skipped empty file: {file_path}")
+            continue
+
         param_df = load_parameter_column_from_file(file_path, param_name)
         if param_df is not None:
             param_dfs[param_name] = param_df
@@ -42,11 +44,16 @@ def load_station_data_from_csv(folder_path: str, station_name: str, latitude: fl
         merged_df['station_name'] = station_name
         merged_df['latitude'] = latitude
         merged_df['longitude'] = longitude
-        merged_df['date'] = pd.to_datetime(merged_df['date'])
+
+        # Приведение к формату даты без времени
+        merged_df['date'] = pd.to_datetime(merged_df['date']).dt.date
+        merged_df = merged_df.drop_duplicates(subset=["date", "station_name"])
+        merged_df = merged_df.sort_values("date")
 
         return merged_df
     else:
         return pd.DataFrame()
+
 
 def collect_all_stations_data():
     station_dfs = []

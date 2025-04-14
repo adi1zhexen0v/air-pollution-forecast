@@ -51,6 +51,30 @@ def get_hourly_weather(lat: float, lon: float, start_date: str, end_date: str) -
 
     return df
 
+
+def get_daily_weather(lat: float, lon: float, start_date: str, end_date: str) -> pd.DataFrame:
+    """
+    Получает почасовую погоду и усредняет по каждому дню
+    """
+    hourly_df = get_hourly_weather(lat, lon, start_date, end_date)
+    hourly_df["date"] = pd.to_datetime(hourly_df["date"])
+    hourly_df["date_only"] = hourly_df["date"].dt.date
+
+    daily_df = hourly_df.groupby("date_only").agg({
+        "temperature": "mean",
+        "humidity": "mean",
+        "wind_speed": "mean",
+        "pressure": "mean"
+    }).reset_index()
+
+    daily_df.rename(columns={"date_only": "date"}, inplace=True)
+    daily_df["latitude"] = lat
+    daily_df["longitude"] = lon
+    return daily_df
+
+
+
+
 def add_weather_columns(df: pd.DataFrame) -> pd.DataFrame:
     start_date = df["date"].min().strftime("%Y-%m-%d")
     end_date = df["date"].max().strftime("%Y-%m-%d")
@@ -63,19 +87,20 @@ def add_weather_columns(df: pd.DataFrame) -> pd.DataFrame:
 
         time.sleep(15)
 
-        weather_df = get_hourly_weather(
+        daily_weather = get_daily_weather(
             lat=station["latitude"],
             lon=station["longitude"],
             start_date=start_date,
             end_date=end_date
         )
-        weather_df["station_name"] = station["station_name"]
-        weather_all.append(weather_df)
+        daily_weather["station_name"] = station["station_name"]
+        weather_all.append(daily_weather)
 
     weather_df = pd.concat(weather_all, ignore_index=True)
 
-    df["date"] = pd.to_datetime(df["date"]).dt.tz_localize(None)
-    weather_df["date"] = pd.to_datetime(weather_df["date"]).dt.tz_localize(None)
+    # Приводим оба датафрейма к типу даты без времени
+    df["date"] = pd.to_datetime(df["date"]).dt.date
+    weather_df["date"] = pd.to_datetime(weather_df["date"]).dt.date
 
     merged_df = pd.merge(
         df,
@@ -84,4 +109,7 @@ def add_weather_columns(df: pd.DataFrame) -> pd.DataFrame:
         how="left"
     )
 
+    # Вернём обратно datetime для удобства (если нужно)
+    merged_df["date"] = pd.to_datetime(merged_df["date"])
     return merged_df
+

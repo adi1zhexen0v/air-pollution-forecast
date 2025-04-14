@@ -12,6 +12,7 @@ venv/
 .vscode/
 .idea/
 data/raw/
+outputs/
 *.csv
 .DS_Store
 Thumbs.db
