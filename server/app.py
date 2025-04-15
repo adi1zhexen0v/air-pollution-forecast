@@ -1,8 +1,10 @@
 from flask import Flask, jsonify
+from flask_cors import CORS
 import pandas as pd
 import os
 
 app = Flask(__name__)
+CORS(app)
 
 @app.route("/api/predictions")
 def get_predictions():
@@ -18,4 +20,5 @@ def get_predictions():
     return jsonify(df.to_dict(orient="records"))
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+

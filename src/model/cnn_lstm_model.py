@@ -9,10 +9,10 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Conv1D, MaxPooling1D, LSTM, Dense, Dropout
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras.losses import Huber
 import time
 
 from src.model.error_estimation import evaluate_model
-
 
 def create_sequences(data, input_len=30, pred_len=7):
     X, Y = [], []
@@ -38,11 +38,9 @@ def train_cnn_lstm_model():
     print(f"[INFO] Using dataset: {csv_path}")
     df = pd.read_csv(csv_path)
 
-    # Удаляем нечисловые и лишние колонки
     drop_cols = ['station_name', 'latitude', 'longitude']
     df = df.drop(columns=[col for col in drop_cols if col in df.columns], errors='ignore')
 
-    # Удаляем строки, где отсутствуют нужные признаки
     required = ['PM2.5', 'temperature', 'humidity', 'wind_speed', 'pressure', 'dayofweek', 'month', 'day']
     df = df[required]
 
@@ -65,29 +63,31 @@ def train_cnn_lstm_model():
         LSTM(64),
         Dropout(0.3),
         Dense(32, activation='relu'),
-        Dense(7)  # 7-дневный прогноз
+        Dense(7)
     ])
 
-    model.compile(optimizer=Adam(0.001), loss='mse', metrics=['mae'])
+    model.compile(optimizer=Adam(0.001), loss=Huber(delta=15.0), metrics=['mae'])
     model.summary()
 
     early_stop = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
 
     print("[INFO] Starting training...")
-    start = time.time()
 
+    weights = np.where(Y_train[:, -1] > 100, 2.0, 1.0)
+
+    start = time.time()
     history = model.fit(
         X_train, Y_train,
+        sample_weight=weights,
         epochs=100,
         batch_size=16,
         validation_split=0.1,
         callbacks=[early_stop],
         verbose=1
     )
-
     end = time.time()
-    print(f"[INFO] Training completed in {end - start:.2f} seconds.")
 
+    print(f"[INFO] Training completed in {end - start:.2f} seconds.")
     model.save(model_output_path)
     print(f"[INFO] Model saved to {model_output_path}")
 
