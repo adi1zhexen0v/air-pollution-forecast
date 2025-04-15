@@ -9,6 +9,4 @@ def extract_time_features(df: pd.DataFrame) -> pd.DataFrame:
   df['month'] = df['date'].dt.month
   df['day'] = df['date'].dt.day
 
-  df = df.drop(columns=['date'])
-
   return df
