@@ -12,7 +12,7 @@ from src.preprocess.feature_selector import select_features
 # === Абсолютные пути ===
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
-MODEL_PATH = os.path.join(BASE_DIR, "outputs", "models", "cnn_lstm_model_8f.keras")
+MODEL_PATH = os.path.join(BASE_DIR, "outputs", "models", "cnn_lstm_model.keras")
 SCALER_PATH = os.path.join(BASE_DIR, "outputs", "models", "scaler_params.json")
 RAW_DATA_DIR = os.path.join(BASE_DIR, "data", "processed")
 timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")

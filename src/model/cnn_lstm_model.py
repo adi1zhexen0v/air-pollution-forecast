@@ -1,4 +1,5 @@
 import os
+import json
 import numpy as np
 import pandas as pd
 from glob import glob
@@ -9,6 +10,9 @@ from tensorflow.keras.layers import Conv1D, MaxPooling1D, LSTM, Dense, Dropout
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.callbacks import EarlyStopping
 import time
+
+from src.model.error_estimation import evaluate_model
+
 
 def create_sequences(data, input_len=30, pred_len=7):
     X, Y = [], []
@@ -28,7 +32,7 @@ def find_latest_after_norm_csv():
 def train_cnn_lstm_model():
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
     csv_path = find_latest_after_norm_csv()
-    model_output_path = os.path.join(BASE_DIR, "outputs", "models", "cnn_lstm_model_8f.keras")
+    model_output_path = os.path.join(BASE_DIR, "outputs", "models", "cnn_lstm_model.keras")
     os.makedirs(os.path.dirname(model_output_path), exist_ok=True)
 
     print(f"[INFO] Using dataset: {csv_path}")
@@ -86,6 +90,18 @@ def train_cnn_lstm_model():
 
     model.save(model_output_path)
     print(f"[INFO] Model saved to {model_output_path}")
+
+    scaler_path = os.path.join(BASE_DIR, "outputs", "models", "scaler_params.json")
+    with open(scaler_path, "r") as f:
+        scaler_params = json.load(f)
+
+    evaluate_model(
+        model_path=model_output_path,
+        scaler_path=scaler_path,
+        X_test=X_test,
+        Y_test=Y_test,
+        feature_names=scaler_params["feature_names"]
+    )
 
     return model, history, X_test, Y_test
 
