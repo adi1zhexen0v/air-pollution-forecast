@@ -17,6 +17,7 @@ pd.set_option('display.width', None)
 def main():
     # print("\n=== [STAGE 1] Data Collection and Preprocessing ===")
     # df = collect_all_stations_data()
+    # df.to_csv("data/processed/all_stations.csv")
     #
     # print("[INFO] Adding weather features...")
     # df = add_weather_columns(df)
@@ -58,9 +59,9 @@ def main():
     train_cnn_lstm_model()
 
     print("\n=== [STAGE 3] Generating Forecast ===")
-    generate_forecast()
+    # generate_forecast()
 
-    print("\n✅ All steps completed successfully.")
+    print("\nAll steps completed successfully.")
 
 if __name__ == "__main__":
     main()

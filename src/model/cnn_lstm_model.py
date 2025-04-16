@@ -32,7 +32,7 @@ def find_latest_after_norm_csv():
 def train_cnn_lstm_model():
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
     csv_path = find_latest_after_norm_csv()
-    model_output_path = os.path.join(BASE_DIR, "outputs", "models", "cnn_lstm_model.keras")
+    model_output_path = os.path.join(BASE_DIR, "outputs", "models", "cnn_lstm_model_2.keras")
     os.makedirs(os.path.dirname(model_output_path), exist_ok=True)
 
     print(f"[INFO] Using dataset: {csv_path}")
@@ -91,7 +91,7 @@ def train_cnn_lstm_model():
     model.save(model_output_path)
     print(f"[INFO] Model saved to {model_output_path}")
 
-    scaler_path = os.path.join(BASE_DIR, "outputs", "models", "scaler_params.json")
+    scaler_path = os.path.join(BASE_DIR, "outputs", "models", "scaler_params_1.json")
     with open(scaler_path, "r") as f:
         scaler_params = json.load(f)
 
@@ -105,5 +105,3 @@ def train_cnn_lstm_model():
 
     return model, history, X_test, Y_test
 
-if __name__ == "__main__":
-    train_cnn_lstm_model()

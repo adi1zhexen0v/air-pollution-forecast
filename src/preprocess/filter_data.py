@@ -3,11 +3,9 @@ import pandas as pd
 def filter_dataframe(df: pd.DataFrame, min_station_coverage: float = 0.9, pm25_max: float = 300):
     print("\n[INFO] Filtering by dynamic common timeframe based on station coverage...")
 
-    # 1. Удалим экстремальные или ошибочные значения
     df = df[(df["PM2.5"] >= 0) & (df["PM2.5"] <= pm25_max)]
     print(f"[INFO] Filtered PM2.5 values: kept within 0–{pm25_max}")
 
-    # 2. Фильтрация по покрытию станций
     total_station_count = df["station_name"].nunique()
     min_required_stations = int(total_station_count * min_station_coverage)
 

@@ -92,12 +92,6 @@ stations = [
     'lon': 76.903186
   },
   {
-    'folder': os.path.join('data', 'raw', 'station_16'),
-    'name': 'Shanyrak 2',
-    'lat': 43.290368,
-    'lon': 76.850196
-  },
-  {
     'folder': os.path.join('data', 'raw', 'station_17'),
     'name': 'Kokkainar Micro',
     'lat': 43.289286,
@@ -108,12 +102,6 @@ stations = [
     'name': 'CHP-2',
     'lat': 43.291054,
     'lon': 76.800777
-  },
-  {
-    'folder': os.path.join('data', 'raw', 'station_19'),
-    'name': 'Almaty Arena',
-    'lat': 43.263511,
-    'lon': 76.818433
   },
   {
     'folder': os.path.join('data', 'raw', 'station_20'),
@@ -146,12 +134,6 @@ stations = [
     'lon': 76.776315
   },
   {
-    'folder': os.path.join('data', 'raw', 'station_25'),
-    'name': 'US Embassy',
-    'lat': 43.222338,
-    'lon': 76.852089
-  },
-  {
     'folder': os.path.join('data', 'raw', 'station_26'),
     'name': 'Abay avenue',
     'lat': 43.225554,
@@ -165,15 +147,9 @@ stations = [
   },
   {
     'folder': os.path.join('data', 'raw', 'station_28'),
-    'name': 'School 175',
-    'lat': 43.200274,
-    'lon': 76.855247
-  },
-  {
-    'folder': os.path.join('data', 'raw', 'station_29'),
-    'name': 'School 187',
-    'lat': 43.186493,
-    'lon': 76.83016
+    'name': 'Rozybakieva, 270',
+    'lat': 43.214958,
+    'lon': 76.893317
   },
   {
     'folder': os.path.join('data', 'raw', 'station_30'),
