@@ -1,80 +1,89 @@
 import os
+import json
 import numpy as np
 import pandas as pd
 from glob import glob
 from datetime import datetime, timedelta
 from tensorflow.keras.models import load_model
-import json
-
 from src.preprocess.scaler import normalize_features
 from src.preprocess.feature_selector import select_features
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-
-MODEL_PATH = os.path.join(BASE_DIR, "outputs", "models", "cnn_lstm_model.keras")
-SCALER_PATH = os.path.join(BASE_DIR, "outputs", "models", "scaler_params.json")
-RAW_DATA_DIR = os.path.join(BASE_DIR, "data", "processed")
+base_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+model_path = os.path.join(base_dir, "outputs", "models", "cnn_lstm_model.keras")
+scaler_path = os.path.join(base_dir, "outputs", "models", "scaler_params.json")
+raw_data_dir = os.path.join(base_dir, "data", "processed")
 timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-OUTPUT_CSV = os.path.join(BASE_DIR, "outputs", "predictions", f"predicted_pm25_{timestamp}.csv")
-
-N_PAST_DAYS = 30
-N_FUTURE_DAYS = 7
+output_csv = os.path.join(base_dir, "outputs", "predictions", "predicted_pm25_" + timestamp + ".csv")
+n_past_days = 30
+n_future_days = 7
 
 def find_latest_raw_csv():
-    files = glob(os.path.join(RAW_DATA_DIR, "before_normalization_*.csv"))
-    if not files:
-        raise FileNotFoundError("No before_normalization_*.csv files found.")
-    return max(files, key=os.path.getctime)
+  files = []
+  for file in glob(os.path.join(raw_data_dir, "before_normalization_*.csv")):
+    files.append(file)
+
+  if len(files) == 0:
+    raise FileNotFoundError("No before_normalization_*.csv files found.")
+
+  latest_file = max(files, key=os.path.getctime)
+  return latest_file
+
 
 def generate_forecast():
-    print("[INFO] Loading latest raw input file...")
-    latest_file = find_latest_raw_csv()
-    df_raw = pd.read_csv(latest_file, parse_dates=["date"])
-    print(f"[INFO] Using file: {latest_file}")
+  print("Loading the latest raw input file...")
+  latest_file = find_latest_raw_csv()
+  df_raw = pd.read_csv(latest_file, parse_dates=["date"])
+  print("Using file:", latest_file)
 
-    df_filtered = select_features(df_raw)
-    non_feature_columns = ['date', 'station_name', 'latitude', 'longitude']
-    feature_cols = [col for col in df_filtered.columns if col not in non_feature_columns]
+  df_filtered = select_features(df_raw)
+  non_feature_columns = ['date', 'station_name', 'latitude', 'longitude']
+  feature_cols = []
+  for col in df_filtered.columns:
+    if col not in non_feature_columns:
+      feature_cols.append(col)
 
-    df_scaled = normalize_features(df_filtered, columns_to_scale=feature_cols, mode="standard")
+  df_scaled = normalize_features(df_filtered, columns_to_scale=feature_cols)
 
-    print(f"[INFO] Loading model: {MODEL_PATH}")
-    model = load_model(MODEL_PATH)
+  print("Loading the model...")
+  model = load_model(model_path)
 
-    with open(SCALER_PATH) as f:
-        scaler_params = json.load(f)
-    pm_index = scaler_params["feature_names"].index("PM2.5")
-    pm_mean = scaler_params["mean"][pm_index]
-    pm_std = scaler_params["scale"][pm_index]
+  with open(scaler_path, "r") as f:
+    scaler_params = json.load(f)
 
-    predictions = []
+  pm_index = scaler_params["feature_names"].index("PM2.5")
+  pm_mean = scaler_params["mean"][pm_index]
+  pm_std = scaler_params["scale"][pm_index]
 
-    for name, group in df_scaled.groupby("station_name"):
-        group = group.sort_values("date")
-        if len(group) < N_PAST_DAYS:
-            print(f"[SKIP] Not enough data for {name}")
-            continue
+  predictions = []
 
-        last_block = group.iloc[-N_PAST_DAYS:]
-        input_seq = last_block[feature_cols].values.astype(np.float32)
-        input_seq = np.expand_dims(input_seq, axis=0)
+  for name, group in df_scaled.groupby("station_name"):
+    group = group.sort_values("date")
 
-        pred = model.predict(input_seq)[0]
+    if len(group) < n_past_days:
+      print("Not enough data for", name)
+      continue
 
-        last_date = pd.to_datetime(group["date"].iloc[-1])
+    last_block = group.iloc[-n_past_days:]
+    input_seq = last_block[feature_cols].values.astype(np.float32)
+    input_seq = np.expand_dims(input_seq, axis=0)
 
-        for i in range(N_FUTURE_DAYS):
-            pred_date = last_date + timedelta(days=i+1)
-            original_pm = pred[i] * pm_std + pm_mean
-            predictions.append({
-                "date": pred_date.strftime("%Y-%m-%d"),
-                "station_name": name,
-                "latitude": group["latitude"].iloc[0],
-                "longitude": group["longitude"].iloc[0],
-                "PM2.5": round(float(original_pm), 2)
-            })
+    pred = model.predict(input_seq)[0]
 
-    os.makedirs(os.path.dirname(OUTPUT_CSV), exist_ok=True)
-    df_forecast = pd.DataFrame(predictions)
-    df_forecast.to_csv(OUTPUT_CSV, index=False)
-    print(f"[SAVED] Forecast saved to {OUTPUT_CSV}")
+    last_date = pd.to_datetime(group["date"].iloc[-1])
+
+    for i in range(n_future_days):
+      pred_date = last_date + timedelta(days=i + 1)
+      original_pm = pred[i] * pm_std + pm_mean
+      prediction = {
+        "date": pred_date.strftime("%Y-%m-%d"),
+        "station_name": name,
+        "latitude": group["latitude"].iloc[0],
+        "longitude": group["longitude"].iloc[0],
+        "PM2.5": round(float(original_pm), 2)
+      }
+      predictions.append(prediction)
+
+  os.makedirs(os.path.dirname(output_csv), exist_ok=True)
+  df_forecast = pd.DataFrame(predictions)
+  df_forecast.to_csv(output_csv, index=False)
+  print("Forecast saved to:", output_csv)

@@ -1,5 +1,4 @@
 import time
-
 import openmeteo_requests
 import requests_cache
 import pandas as pd
@@ -51,11 +50,7 @@ def get_hourly_weather(lat: float, lon: float, start_date: str, end_date: str) -
 
     return df
 
-
 def get_daily_weather(lat: float, lon: float, start_date: str, end_date: str) -> pd.DataFrame:
-    """
-    Получает почасовую погоду и усредняет по каждому дню
-    """
     hourly_df = get_hourly_weather(lat, lon, start_date, end_date)
     hourly_df["date"] = pd.to_datetime(hourly_df["date"])
     hourly_df["date_only"] = hourly_df["date"].dt.date
@@ -70,10 +65,8 @@ def get_daily_weather(lat: float, lon: float, start_date: str, end_date: str) ->
     daily_df.rename(columns={"date_only": "date"}, inplace=True)
     daily_df["latitude"] = lat
     daily_df["longitude"] = lon
+
     return daily_df
-
-
-
 
 def add_weather_columns(df: pd.DataFrame) -> pd.DataFrame:
     start_date = df["date"].min().strftime("%Y-%m-%d")
@@ -82,8 +75,12 @@ def add_weather_columns(df: pd.DataFrame) -> pd.DataFrame:
     stations = df[["station_name", "latitude", "longitude"]].drop_duplicates()
     weather_all = []
 
-    for i, (_, station) in enumerate(stations.iterrows()):
-        print(f"[{i + 1}/{len(stations)}] Fetching weather for {station['station_name']}")
+    station_counter = 1
+    total_stations = len(stations)
+
+    for _, station in stations.iterrows():
+        print(f"Fetching weather for {station['station_name']} ({station_counter}/{total_stations})")
+        station_counter += 1
 
         time.sleep(15)
 
@@ -98,7 +95,6 @@ def add_weather_columns(df: pd.DataFrame) -> pd.DataFrame:
 
     weather_df = pd.concat(weather_all, ignore_index=True)
 
-    # Приводим оба датафрейма к типу даты без времени
     df["date"] = pd.to_datetime(df["date"]).dt.date
     weather_df["date"] = pd.to_datetime(weather_df["date"]).dt.date
 
@@ -109,7 +105,6 @@ def add_weather_columns(df: pd.DataFrame) -> pd.DataFrame:
         how="left"
     )
 
-    # Вернём обратно datetime для удобства (если нужно)
     merged_df["date"] = pd.to_datetime(merged_df["date"])
-    return merged_df
 
+    return merged_df
